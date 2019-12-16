@@ -1,0 +1,231 @@
+---
+
+metadata:
+
+  title: |
+
+    Rogers Review Reminder System
+
+---
+
+modules:
+
+  - docassemble.base.util
+
+---
+
+objects:
+
+  - client: Individual # Creates a new variable named client, which is an instance of an Individual object
+
+---
+
+mandatory: True
+
+scan for variables: False
+
+code: |
+
+  allow_cron = True
+
+  multi_user = True 
+
+
+
+  intro_provided
+
+  client.name.first
+
+  client.phone_number
+
+  review_date
+
+  send_all_done_text
+
+  ending_screen
+
+---
+initial: True
+code: |
+  process_action()
+---
+
+decoration: landmark
+
+mandatory: true 
+
+question: |
+
+  Rogers Review Reminder System
+
+subquestion: |
+
+   Welcome to the Rogers Review Reminder System!
+   % if intro_provided and send_all_done_text:
+   This system will send you a 60-day, 30-day, 2-week, and 1-week text message reminder of your Rogers Review hearing.
+  
+   *Note: Standard text messageing rates apply.* 
+   % else:
+   We are unable to send you reminder text messages at this time. 
+   % endif
+---
+decoration: landmark
+question: |
+   Rogers Review Reminder System
+subquestion: |
+   This system will send you a 60-day, 30-day, 2-week, and 1-week text message reminder of your Rogers Review hearing.
+  
+   *Note: Standard text messageing rates apply.* 
+   
+field: intro_provided 
+---
+
+question: |
+
+  What is your name?
+
+fields:
+
+  - First name: client.name.first
+
+  - Middle name: client.name.middle
+
+    required: False
+
+  - Last name: client.name.last
+
+---
+
+decoration: calendar-day
+
+question: |
+
+  When is your Rogers Review date?
+  
+subquestion: |
+
+  Take a look at the *REVIEW ORDER Antipsychotic Medication* form provided to you by the court.
+
+  Item 2 of the *REVIEW ORDER* includes the review date and time.
+
+fields:
+
+  - What is the review date?: review_date
+
+    datatype: date
+
+---
+
+question: |
+
+  What is your cell phone number?
+
+subquestion: | 
+  
+  *Note:  standard text messaging rates apply.*
+
+fields:
+
+  - Cell phone number: client.phone_number
+
+---
+
+code: |
+
+  if task_not_yet_performed('send all done'):
+
+    send_sms(to=client, template=send_all_done_text_template, task="send all done")
+
+  send_all_done_text = True
+
+---
+
+template: send_all_done_text_template
+
+subject: |
+
+  Hi ${client},
+
+content: |
+
+  this is the Rogers Review Reminder System. We'll send you text message reminders about your Rogers Review hearing, scheduled on ${review_date}. 
+  
+  To cancel these reminders, reply 'Cancel' to this text message.
+
+---
+
+template: reminder_sms_60_template
+
+subject: |
+  Hello ${client},
+  
+content: |
+  this is the Rogers Review Reminder System. According to our records, your Rogers Review hearing is 60-days away, on ${review_date}.
+
+   To cancel these reminders, reply 'Cancel' to this text message.
+---
+template: reminder_sms_30_template
+
+subject: |
+  Hello ${client},
+
+content: |
+  this is the Rogers Review Reminder System. According to our records, your Rogers Review hearing is 30-days away, on ${review_date}.
+  
+  To cancel these reminders, reply 'Cancel' to this text message.
+---
+template: reminder_sms_14_template
+
+subject: |
+  Hello ${client}, 
+
+content: |
+  this is the Rogers Review Reminder System. According to our records, your Rogers Review hearing is 2-weeks away, on ${review_date}.
+
+  To cancel these reminders, reply 'Cancel' to this text message.
+---
+template: reminder_sms_7_template
+
+subject: |
+  Hello ${client}, 
+
+content: |
+  this is the Rogers Review Reminder System. According to our records, your Rogers Review hearing is 1-week away, on ${review_date}.
+  
+  To cancel these reminders, reply 'Cancel' to this text message.
+---
+event: cron_daily
+
+code: |
+
+  if task_not_yet_performed("scheduled_text1") and today() < review_date.plus(days=61) and today() > review_date.plus(days=59):
+    send_sms(to=client,template=reminder_sms_60_template, task="scheduled_text1")
+
+  if task_not_yet_performed("scheduled_text2") and today() < review_date.plus(days=31) and today() > review_date.plus(days=29):
+    send_sms(to=client,template=reminder_sms_30_template, task="scheduled_text2")
+
+  if task_not_yet_performed("scheduled_text3") and today() < review_date.plus(days=16) and today() > review_date.plus(days=14):
+    send_sms(to=client,template=reminder_sms_14_template, task="scheduled_text3")
+
+  if task_not_yet_performed("scheduled_text4") and today() < review_date.plus(days=8) and today() > review_date.plus(days=6):
+    send_sms(to=client,template=reminder_sms_7_template, task="scheduled_text4")
+---
+event: ending_screen
+
+question: |
+
+  Thanks for using the Rogers Review Reminder System, ${client}!
+
+subquestion: |
+
+  % if review_date > today():
+
+  We will send you text message reminders of your Rogers Review hearing scheduled for ${review_date}.
+  
+  *Hearing dates are subject to change.* 
+  
+  *Please contact the court to confirm your hearing date.*
+  
+  *If your hearing date changes after enrolling in the Rogers Review Reminder System, please disregard the text messages with the previous hearing date, and consider re-enrolling in the reminder system to receive text messages for your new hearing date.* 
+
+  % endif
